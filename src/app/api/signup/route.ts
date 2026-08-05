@@ -8,6 +8,7 @@ const signupSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.email("Enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  inviteToken: z.string().optional(),
 });
 
 function slugify(name: string) {
@@ -40,6 +41,49 @@ export async function POST(request: Request) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+
+  // Invited signup: join the inviting org instead of creating a personal one
+  if (parsed.data.inviteToken) {
+    const invitation = await prisma.invitation.findUnique({
+      where: { token: parsed.data.inviteToken },
+      select: { id: true, role: true, expiresAt: true, acceptedById: true, organizationId: true },
+    });
+    if (!invitation || invitation.acceptedById || invitation.expiresAt < new Date()) {
+      return NextResponse.json(
+        { error: "This invite link is invalid or has expired." },
+        { status: 410 }
+      );
+    }
+
+    const user = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { name, email, passwordHash },
+      });
+      await tx.membership.create({
+        data: {
+          userId: user.id,
+          organizationId: invitation.organizationId,
+          role: invitation.role,
+        },
+      });
+      await tx.invitation.update({
+        where: { id: invitation.id },
+        data: { acceptedById: user.id },
+      });
+      await tx.activityLog.create({
+        data: {
+          action: "member.joined",
+          metadata: { role: invitation.role },
+          userId: user.id,
+          organizationId: invitation.organizationId,
+        },
+      });
+      return user;
+    });
+
+    return NextResponse.json({ id: user.id, email: user.email }, { status: 201 });
+  }
+
   // Random suffix keeps slugs unique even when two users share a name
   const slug = `${slugify(name) || "workspace"}-${randomBytes(3).toString("hex")}`;
 

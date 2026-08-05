@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { AuthShell } from "@/components/auth/AuthShell";
@@ -15,7 +15,17 @@ import {
 } from "@/components/auth/icons";
 
 export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const router = useRouter();
+  // Invite token arrives via /signup?invite=... from an invite link
+  const inviteToken = useSearchParams().get("invite");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,7 +40,12 @@ export default function SignupPage() {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          ...(inviteToken && { inviteToken }),
+        }),
       });
 
       if (!res.ok) {
@@ -62,8 +77,12 @@ export default function SignupPage() {
 
   return (
     <AuthShell
-      title="Create your workspace"
-      subtitle="Free while in development. No credit card, obviously."
+      title={inviteToken ? "Join your team" : "Create your workspace"}
+      subtitle={
+        inviteToken
+          ? "Create your account to accept the invitation."
+          : "Free while in development. No credit card, obviously."
+      }
       footer={
         <>
           Already have an account?{" "}
@@ -133,7 +152,9 @@ export default function SignupPage() {
         </button>
 
         <p className="pt-1 text-center text-xs leading-relaxed text-white/30">
-          You&rsquo;ll get your own organization with you as its owner.
+          {inviteToken
+            ? "You'll join your teammate's workspace."
+            : "You'll get your own organization with you as its owner."}
         </p>
       </form>
     </AuthShell>

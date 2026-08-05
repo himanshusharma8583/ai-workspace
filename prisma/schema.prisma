@@ -29,6 +29,8 @@ model User {
   memberships   Membership[]
   documents     Document[]   @relation("DocumentAuthor")
   activityLogs  ActivityLog[]
+  invitationsSent     Invitation[] @relation("InvitationCreator")
+  invitationsAccepted Invitation[] @relation("InvitationAcceptor")
 }
 
 // ============ MULTI-TENANCY CORE ============
@@ -43,6 +45,26 @@ model Organization {
   memberships  Membership[]
   documents    Document[]
   activityLogs ActivityLog[]
+  invitations  Invitation[]
+}
+
+// Shareable invite links: the token is the capability. No email service
+// needed (free-tier constraint) — admins copy the link and send it anywhere.
+model Invitation {
+  id             String       @id @default(cuid())
+  token          String       @unique @default(cuid())
+  role           Role         @default(MEMBER)
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  invitedBy      User         @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedById    String
+  acceptedBy     User?        @relation("InvitationAcceptor", fields: [acceptedById], references: [id])
+  acceptedById   String?
+
+  @@index([organizationId])
 }
 
 enum Role {

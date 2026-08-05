@@ -37,6 +37,7 @@ export function DocumentEditor({
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const dirty = title !== initialTitle || body !== initialBody;
 
@@ -61,6 +62,31 @@ export function DocumentEditor({
       setError("Could not reach the server.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleRestore(versionId: string) {
+    setRestoringId(versionId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/documents/${id}/restore`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ versionId }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error ?? "Could not restore this version.");
+        return;
+      }
+      setTitle(data.title);
+      setBody(typeof data.content === "string" ? data.content : "");
+      setSavedAt(new Date());
+      router.refresh();
+    } catch {
+      setError("Could not reach the server.");
+    } finally {
+      setRestoringId(null);
     }
   }
 
@@ -143,14 +169,30 @@ export function DocumentEditor({
           {versions.map((v, i) => (
             <li
               key={v.id}
-              className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2"
+              className="group flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2"
             >
               <span className="text-xs font-medium text-white/60">
                 v{totalVersions - i}
+                {i === 0 && (
+                  <span className="ml-1.5 text-[10px] text-emerald-300/70">
+                    current
+                  </span>
+                )}
               </span>
-              <time className="text-[11px] text-white/30">
-                {timeFormat.format(new Date(v.createdAt))}
-              </time>
+              <span className="flex items-center gap-2">
+                {!readOnly && i > 0 && (
+                  <button
+                    onClick={() => handleRestore(v.id)}
+                    disabled={restoringId !== null}
+                    className="rounded-md border border-white/10 px-2 py-0.5 text-[10px] font-medium text-indigo-300 opacity-0 transition group-hover:opacity-100 hover:bg-indigo-500/15 disabled:opacity-40"
+                  >
+                    {restoringId === v.id ? "Restoring…" : "Restore"}
+                  </button>
+                )}
+                <time className="text-[11px] text-white/30">
+                  {timeFormat.format(new Date(v.createdAt))}
+                </time>
+              </span>
             </li>
           ))}
           {versions.length === 0 && (

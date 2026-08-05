@@ -17,6 +17,7 @@ export async function getWorkspaceContext(): Promise<WorkspaceContext | null> {
 
   const membership = await prisma.membership.findFirst({
     where: { userId: session.user.id },
+    orderBy: { createdAt: "asc" },
     select: {
       role: true,
       organizationId: true,

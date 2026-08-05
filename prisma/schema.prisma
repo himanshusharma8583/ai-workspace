@@ -82,7 +82,7 @@ model Document {
 
   versions       DocumentVersion[]
 
-  @@index([organizationId])
+  @@index([organizationId, updatedAt])
 }
 
 model DocumentVersion {

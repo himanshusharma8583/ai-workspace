@@ -6,7 +6,7 @@ import { authConfig } from "@/lib/auth.config";
 // cookie, so this runs on every navigation without ever touching the database.
 const { auth } = NextAuth(authConfig);
 
-const PROTECTED_PREFIXES = ["/dashboard"];
+const PROTECTED_PREFIXES = ["/dashboard", "/documents"];
 const AUTH_PAGES = ["/login", "/signup"];
 
 export default auth((req) => {

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { auth, signOut } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Logo, AuroraBackground } from "@/components/auth/AuthShell";
+import { AuroraBackground } from "@/components/auth/AuthShell";
+import { AppHeader } from "@/components/AppHeader";
 import {
   FileTextIcon,
   UserIcon,
@@ -89,29 +90,11 @@ export default async function DashboardPage() {
     <main className="relative min-h-screen bg-[#07070d] text-white">
       <AuroraBackground />
 
-      <header className="relative z-10 flex items-center justify-between border-b border-white/5 px-6 py-4 sm:px-10">
-        <div className="flex items-center gap-4">
-          <Logo />
-          <span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/60 sm:block">
-            {org.name}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-white/50 sm:block">
-            {session.user.email}
-          </span>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/" });
-            }}
-          >
-            <button className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10">
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
+      <AppHeader
+        orgName={org.name}
+        email={session.user.email}
+        active="dashboard"
+      />
 
       <div className="relative z-10 mx-auto w-full max-w-5xl px-6 py-10 sm:px-10">
         <p className="text-sm font-medium text-indigo-300">{org.name}</p>

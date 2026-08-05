@@ -5,6 +5,7 @@ import { Logo } from "@/components/auth/AuthShell";
 const NAV = [
   { href: "/dashboard", label: "Dashboard", key: "dashboard" },
   { href: "/documents", label: "Documents", key: "documents" },
+  { href: "/chat", label: "Chat", key: "chat" },
 ] as const;
 
 export function AppHeader({

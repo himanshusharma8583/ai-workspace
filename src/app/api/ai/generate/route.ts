@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getWorkspaceContext, canEdit } from "@/lib/workspace";
 import { generateDocument } from "@/lib/ai";
+import { reindexDocument } from "@/lib/rag";
 
 const requestSchema = z.object({
   prompt: z
@@ -94,6 +95,12 @@ export async function POST(request: Request) {
     });
     return document;
   });
+
+  try {
+    await reindexDocument(document.id, ctx.organizationId, title, generated.body);
+  } catch (error) {
+    console.error("Reindex failed for document", document.id, error);
+  }
 
   return NextResponse.json(document, { status: 201 });
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getWorkspaceContext, canEdit, canDelete } from "@/lib/workspace";
+import { reindexDocument } from "@/lib/rag";
 
 const updateSchema = z
   .object({
@@ -107,6 +108,19 @@ export async function PATCH(
   if (!result) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
+
+  // Refresh the RAG search index; an embedding failure must never fail a save
+  try {
+    await reindexDocument(
+      result.id,
+      workspace.organizationId,
+      result.title,
+      typeof result.content === "string" ? result.content : ""
+    );
+  } catch (error) {
+    console.error("Reindex failed for document", result.id, error);
+  }
+
   return NextResponse.json(result);
 }
 

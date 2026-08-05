@@ -81,8 +81,27 @@ model Document {
   organizationId String
 
   versions       DocumentVersion[]
+  chunks         DocumentChunk[]
 
   @@index([organizationId, updatedAt])
+}
+
+// RAG search index: documents split into chunks, each with a 768-dim Gemini
+// embedding. organizationId is denormalized onto every chunk so similarity
+// search is tenant-filtered in the same SQL query that scans vectors.
+model DocumentChunk {
+  id             String                 @id @default(cuid())
+  chunkIndex     Int
+  content        String
+  embedding      Unsupported("vector(768)")?
+  createdAt      DateTime               @default(now())
+
+  document       Document               @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId     String
+  organizationId String
+
+  @@index([documentId])
+  @@index([organizationId])
 }
 
 model DocumentVersion {

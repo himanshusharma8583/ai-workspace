@@ -76,3 +76,45 @@ export async function generateDocument(
   }
   return parsed.data;
 }
+
+// --- RAG chat ---
+
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+
+const CHAT_SYSTEM_PROMPT = `You are the AI assistant for a team workspace. Answer questions using ONLY the workspace documents provided as context.
+Rules:
+- Ground every claim in the context. If the context doesn't contain the answer, say so plainly and suggest what document might need to be created.
+- Mention document titles when referring to them.
+- Be concise and direct. Use Markdown lists when helpful.`;
+
+export async function answerQuestion(
+  question: string,
+  history: ChatTurn[],
+  context: { title: string; content: string }[]
+): Promise<string> {
+  const contextBlock =
+    context.length === 0
+      ? "(no relevant documents found)"
+      : context
+          .map((c, i) => `[${i + 1}] From "${c.title}":\n${c.content}`)
+          .join("\n\n---\n\n");
+
+  const response = await model.invoke([
+    ["system", CHAT_SYSTEM_PROMPT],
+    ...history.map((turn) => [turn.role === "user" ? "user" : "assistant", turn.content] as [string, string]),
+    [
+      "user",
+      `Workspace context:\n\n${contextBlock}\n\n---\n\nQuestion: ${question}`,
+    ],
+  ]);
+
+  return typeof response.content === "string"
+    ? response.content
+    : response.content
+        .map((part) =>
+          typeof part === "object" && part !== null && "text" in part
+            ? String((part as { text: unknown }).text)
+            : ""
+        )
+        .join("");
+}

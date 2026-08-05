@@ -50,7 +50,7 @@ export default async function Home() {
 
       <section className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-24 text-center">
         <span className="mb-6 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium tracking-wide text-indigo-300">
-          Building in public — auth is live, AI is next
+          AI generation &amp; chat with your docs — live now
         </span>
 
         <h1 className="max-w-3xl text-5xl font-semibold leading-[1.1] tracking-tight sm:text-6xl">

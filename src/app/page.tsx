@@ -68,13 +68,13 @@ export default async function Home() {
 
         <div className="mt-10 flex items-center gap-4">
           {session?.user ? (
-            <p className="text-sm text-white/60">
-              Signed in as{" "}
-              <span className="font-medium text-white">
-                {session.user.name ?? session.user.email}
-              </span>{" "}
-              — dashboard coming soon.
-            </p>
+            <Link
+              href="/dashboard"
+              className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-semibold shadow-lg shadow-indigo-950/50 transition hover:brightness-110"
+            >
+              Open your dashboard
+              <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
           ) : (
             <>
               <Link

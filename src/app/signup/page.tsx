@@ -51,7 +51,7 @@ export default function SignupPage() {
         return;
       }
 
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     } catch {
       setError("Could not reach the server. Please try again.");

@@ -5,6 +5,7 @@ import { getWorkspaceContext, canEdit } from "@/lib/workspace";
 import { AuroraBackground } from "@/components/auth/AuthShell";
 import { AppHeader } from "@/components/AppHeader";
 import { NewDocumentButton } from "@/components/documents/NewDocumentButton";
+import { GenerateDocumentButton } from "@/components/documents/GenerateDocumentButton";
 import { FileTextIcon } from "@/components/auth/icons";
 
 const dateFormat = new Intl.DateTimeFormat("en-US", {
@@ -48,7 +49,12 @@ export default async function DocumentsPage() {
               Every save creates a version — nothing is ever lost.
             </p>
           </div>
-          {canEdit(ctx.role) && <NewDocumentButton />}
+          {canEdit(ctx.role) && (
+            <div className="flex items-center gap-3">
+              <GenerateDocumentButton />
+              <NewDocumentButton />
+            </div>
+          )}
         </div>
 
         {documents.length === 0 ? (

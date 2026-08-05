@@ -1,0 +1,99 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { getWorkspaceContext, canEdit } from "@/lib/workspace";
+import { generateDocument } from "@/lib/ai";
+
+const requestSchema = z.object({
+  prompt: z
+    .string()
+    .trim()
+    .min(10, "Describe the document in at least a few words")
+    .max(2000, "Keep the request under 2000 characters"),
+});
+
+// Per-user daily cap. Counted from the activity log (indexed query) rather
+// than in-memory state, so it holds up across serverless instances and
+// protects the shared Gemini free-tier quota from any single user.
+const DAILY_LIMIT = 10;
+
+export async function POST(request: Request) {
+  const ctx = await getWorkspaceContext();
+  if (!ctx) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+  if (!canEdit(ctx.role)) {
+    return NextResponse.json(
+      { error: "Viewers cannot create documents." },
+      { status: 403 }
+    );
+  }
+
+  const body = await request.json().catch(() => null);
+  const parsed = requestSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid input" },
+      { status: 400 }
+    );
+  }
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const usedToday = await prisma.activityLog.count({
+    where: {
+      organizationId: ctx.organizationId,
+      userId: ctx.userId,
+      action: "document.ai_generate",
+      createdAt: { gte: startOfDay },
+    },
+  });
+  if (usedToday >= DAILY_LIMIT) {
+    return NextResponse.json(
+      { error: `Daily AI limit reached (${DAILY_LIMIT}/day). Try again tomorrow.` },
+      { status: 429 }
+    );
+  }
+
+  let generated;
+  try {
+    generated = await generateDocument(parsed.data.prompt);
+  } catch (error) {
+    console.error("AI generation failed:", error);
+    return NextResponse.json(
+      { error: "The AI couldn't generate this document. Please try again." },
+      { status: 502 }
+    );
+  }
+
+  const title = generated.title.slice(0, 200);
+
+  const document = await prisma.$transaction(async (tx) => {
+    const document = await tx.document.create({
+      data: {
+        title,
+        content: generated.body,
+        authorId: ctx.userId,
+        organizationId: ctx.organizationId,
+      },
+      select: { id: true, title: true },
+    });
+    await tx.documentVersion.create({
+      data: {
+        documentId: document.id,
+        content: { title, body: generated.body },
+      },
+    });
+    await tx.activityLog.create({
+      data: {
+        action: "document.ai_generate",
+        metadata: { documentId: document.id, title, prompt: parsed.data.prompt },
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+      },
+    });
+    return document;
+  });
+
+  return NextResponse.json(document, { status: 201 });
+}

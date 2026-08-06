@@ -23,7 +23,7 @@ export type GeneratedDocument = z.infer<typeof generatedDocumentSchema>;
 // Pinned rather than the "-latest" alias: the alias resolves to the newest
 // model, and Google gives the newest model the TIGHTEST free-tier quota
 // (gemini-3.6-flash: 20 req/day). One generation back = far bigger quota.
-const model = new ChatGoogleGenerativeAI({
+export const geminiModel = new ChatGoogleGenerativeAI({
   model: "gemini-3.5-flash",
   apiKey: process.env.GEMINI_API_KEY,
   temperature: 0.7,
@@ -42,7 +42,7 @@ TITLE: <the document title>
 ---
 <the full Markdown content>`;
 
-function contentToText(content: unknown): string {
+export function contentToText(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
     return content
@@ -80,7 +80,7 @@ async function invokeWithFallback(
   messages: [string, string][]
 ): Promise<string> {
   try {
-    const response = await model.invoke(messages);
+    const response = await geminiModel.invoke(messages);
     return contentToText(response.content);
   } catch (error) {
     console.warn("Gemini failed, falling back to Groq:", error);
@@ -101,7 +101,7 @@ export async function generateDocument(
 
 // --- Meeting summaries (Groq) ---
 
-const groqModel = new ChatGroq({
+export const groqModel = new ChatGroq({
   model: "openai/gpt-oss-120b",
   apiKey: process.env.GROQ_API_KEY,
   temperature: 0.3,

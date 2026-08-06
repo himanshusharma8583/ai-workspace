@@ -11,15 +11,17 @@ import {
 } from "@/components/auth/icons";
 
 type Source = { id: string; title: string };
+type Action = { type: "created" | "updated"; documentId: string; title: string };
 type Message = {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
+  actions?: Action[];
 };
 
 const SUGGESTIONS = [
   "Summarize what's in our workspace",
-  "What are our API pagination rules?",
+  "Create a doc listing this week's decisions",
   "What goes into an incident postmortem?",
 ];
 
@@ -65,7 +67,12 @@ export function ChatPanel({ orgName }: { orgName: string }) {
       }
       setMessages([
         ...nextMessages,
-        { role: "assistant", content: data.answer, sources: data.sources },
+        {
+          role: "assistant",
+          content: data.answer,
+          sources: data.sources,
+          actions: data.actions,
+        },
       ]);
     } catch {
       setError("Could not reach the server.");
@@ -87,8 +94,8 @@ export function ChatPanel({ orgName }: { orgName: string }) {
               Chat with {orgName}
             </h1>
             <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-white/40">
-              Ask anything about your documents. Answers are grounded in your
-              workspace and cite their sources.
+              Ask questions — or give it work. The agent can search, read,
+              create and update your team&rsquo;s documents.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               {SUGGESTIONS.map((s) => (
@@ -119,6 +126,21 @@ export function ChatPanel({ orgName }: { orgName: string }) {
                     {message.content}
                   </ReactMarkdown>
                 </div>
+                {message.actions && message.actions.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {message.actions.map((action, j) => (
+                      <Link
+                        key={`${action.documentId}-${j}`}
+                        href={`/documents/${action.documentId}`}
+                        className="flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-medium text-emerald-200 transition hover:border-emerald-400/50"
+                      >
+                        <FileTextIcon className="h-3 w-3" />
+                        {action.type === "created" ? "Created" : "Updated"}:{" "}
+                        {action.title}
+                      </Link>
+                    ))}
+                  </div>
+                )}
                 {message.sources && message.sources.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5 border-t border-white/5 pt-2.5">
                     {message.sources.map((source) => (

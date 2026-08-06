@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getWorkspaceContext } from "@/lib/workspace";
-import { searchChunks } from "@/lib/rag";
-import { answerQuestion } from "@/lib/ai";
+import { runAgent } from "@/lib/agent";
 
 const requestSchema = z.object({
   question: z.string().trim().min(2).max(1000),
@@ -50,12 +49,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const chunks = await searchChunks(ctx.organizationId, parsed.data.question);
-
-    const answer = await answerQuestion(
+    // The agent decides which tools to use: search, read, list, and (for
+    // roles that may edit) create or update documents.
+    const result = await runAgent(
+      ctx,
       parsed.data.question,
-      parsed.data.history,
-      chunks.map((c) => ({ title: c.title, content: c.content }))
+      parsed.data.history
     );
 
     await prisma.activityLog.create({
@@ -67,14 +66,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // Deduplicate sources by document, keep best similarity per doc
-    const sources = [
-      ...new Map(
-        chunks.map((c) => [c.documentId, { id: c.documentId, title: c.title }])
-      ).values(),
-    ];
-
-    return NextResponse.json({ answer, sources });
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Chat failed:", error);
     return NextResponse.json(

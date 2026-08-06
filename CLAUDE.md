@@ -4,7 +4,7 @@
 
 Resume-grade full-stack app (Notion + ChatGPT + GitHub for teams) by Himanshu Sharma. **Everything must run on free tiers.** Owner is a beginner: explain commands/files simply, ask before destructive commands (rm, resets, drops, force-push, killing processes), never print/log/commit `.env` contents. Prefer small verified steps; commit after each working feature (short present-tense messages). Design every API as if 1M users depend on it.
 
-**Live:** https://ai-workspace-self-13fa.vercel.app — every push to `main` auto-deploys (Vercel project "ai-workspace", env vars: DATABASE_URL, AUTH_SECRET, GEMINI_API_KEY, GROQ_API_KEY).
+**Live:** https://ai-workspace-self-13fa.vercel.app — every push to `main` auto-deploys (Vercel project "ai-workspace", env vars: DATABASE_URL, AUTH_SECRET, GEMINI_API_KEY, GROQ_API_KEY, UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN).
 
 ## Stack (locked — ask before swapping)
 Next.js 16.3 App Router + TS + Tailwind v4 (`src/`, `@/*` alias) · Prisma 7 + Neon Postgres (Singapore) with pgvector · next-auth v5 beta (credentials, JWT) · zod v4 · LangChain with **Gemini** (`gemini-3.5-flash`, pinned) + **Groq** (`openai/gpt-oss-120b`) and mutual failover · Vercel hosting.
@@ -24,15 +24,14 @@ Next.js 16.3 App Router + TS + Tailwind v4 (`src/`, `@/*` alias) · Prisma 7 + N
 - Models: User, Organization, Membership (roles), Document, DocumentVersion (append-only snapshots), DocumentChunk, ActivityLog, Invitation
 
 ## Done and verified (all live)
-Auth · signup with atomic org creation · dashboard · documents CRUD (cursor pagination) · version history + restore · member invite links + members page · RBAC · AI doc generation · AI meeting summaries (Groq) · RAG chat with citations · workspace AI agent · activity logs · README with screenshots
+Auth · signup with atomic org creation · dashboard · documents CRUD (cursor pagination) · version history + restore · member invite links + members page · RBAC · AI doc generation · AI meeting summaries (Groq) · RAG chat with citations · workspace AI agent · activity logs · README with screenshots · Upstash rate limiting (`src/lib/ratelimit.ts` — sliding window, fail-open; per-IP on signup, per-user on AI routes + invite accept)
 
 ## Next (agreed order)
-1. Upstash Redis rate limiting (owner creates free account when asked)
-2. File uploads (Vercel Blob)
-3. Stripe test-mode billing
-4. AI code assistant (LangGraph here)
-5. Real-time collab (polling or Liveblocks)
-6. Portfolio Dockerfile
+1. File uploads (Vercel Blob)
+2. Stripe test-mode billing
+3. AI code assistant (LangGraph here)
+4. Real-time collab (polling or Liveblocks)
+5. Portfolio Dockerfile
 
 ## Gotchas learned
 - Free-tier quotas are per-model; `-latest` aliases resolve to the newest model with the TIGHTEST quota (gemini-3.6-flash: 20 req/day). Pin models.

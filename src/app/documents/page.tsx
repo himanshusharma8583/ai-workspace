@@ -6,6 +6,7 @@ import { AuroraBackground } from "@/components/auth/AuthShell";
 import { AppHeader } from "@/components/AppHeader";
 import { NewDocumentButton } from "@/components/documents/NewDocumentButton";
 import { GenerateDocumentButton } from "@/components/documents/GenerateDocumentButton";
+import { SummarizeMeetingButton } from "@/components/documents/SummarizeMeetingButton";
 import { FileTextIcon } from "@/components/auth/icons";
 
 const dateFormat = new Intl.DateTimeFormat("en-US", {
@@ -50,7 +51,8 @@ export default async function DocumentsPage() {
             </p>
           </div>
           {canEdit(ctx.role) && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <SummarizeMeetingButton />
               <GenerateDocumentButton />
               <NewDocumentButton />
             </div>

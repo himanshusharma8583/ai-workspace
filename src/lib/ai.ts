@@ -20,10 +20,11 @@ const generatedDocumentSchema = z.object({
 
 export type GeneratedDocument = z.infer<typeof generatedDocumentSchema>;
 
-// The "-latest" alias tracks Google's current Flash model — older pinned
-// models get retired for new accounts (gemini-2.5-flash already 404s here)
+// Pinned rather than the "-latest" alias: the alias resolves to the newest
+// model, and Google gives the newest model the TIGHTEST free-tier quota
+// (gemini-3.6-flash: 20 req/day). One generation back = far bigger quota.
 const model = new ChatGoogleGenerativeAI({
-  model: "gemini-flash-latest",
+  model: "gemini-3.5-flash",
   apiKey: process.env.GEMINI_API_KEY,
   temperature: 0.7,
   maxRetries: 2,
@@ -73,14 +74,29 @@ function parseTitleBody(raw: string): GeneratedDocument {
   return parsed.data;
 }
 
+// Provider failover: if Gemini fails (quota, outage), retry the same request
+// on Groq. Callers never see a single-provider hiccup.
+async function invokeWithFallback(
+  messages: [string, string][]
+): Promise<string> {
+  try {
+    const response = await model.invoke(messages);
+    return contentToText(response.content);
+  } catch (error) {
+    console.warn("Gemini failed, falling back to Groq:", error);
+    const response = await groqModel.invoke(messages);
+    return contentToText(response.content);
+  }
+}
+
 export async function generateDocument(
   prompt: string
 ): Promise<GeneratedDocument> {
-  const response = await model.invoke([
+  const raw = await invokeWithFallback([
     ["system", SYSTEM_PROMPT],
     ["user", prompt],
   ]);
-  return parseTitleBody(contentToText(response.content));
+  return parseTitleBody(raw);
 }
 
 // --- Meeting summaries (Groq) ---
@@ -141,22 +157,18 @@ export async function answerQuestion(
           .map((c, i) => `[${i + 1}] From "${c.title}":\n${c.content}`)
           .join("\n\n---\n\n");
 
-  const response = await model.invoke([
+  return invokeWithFallback([
     ["system", CHAT_SYSTEM_PROMPT],
-    ...history.map((turn) => [turn.role === "user" ? "user" : "assistant", turn.content] as [string, string]),
+    ...history.map(
+      (turn) =>
+        [turn.role === "user" ? "user" : "assistant", turn.content] as [
+          string,
+          string,
+        ]
+    ),
     [
       "user",
       `Workspace context:\n\n${contextBlock}\n\n---\n\nQuestion: ${question}`,
     ],
   ]);
-
-  return typeof response.content === "string"
-    ? response.content
-    : response.content
-        .map((part) =>
-          typeof part === "object" && part !== null && "text" in part
-            ? String((part as { text: unknown }).text)
-            : ""
-        )
-        .join("");
 }

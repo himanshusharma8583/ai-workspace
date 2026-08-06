@@ -2,6 +2,8 @@
 
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   SparklesIcon,
   FileTextIcon,
@@ -112,9 +114,11 @@ export function ChatPanel({ orgName }: { orgName: string }) {
           ) : (
             <div key={i} className="flex justify-start">
               <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur-xl">
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/85">
-                  {message.content}
-                </p>
+                <div className="prose prose-sm prose-invert max-w-none text-white/85 prose-headings:text-white/90 prose-headings:text-[13px] prose-headings:font-semibold prose-strong:text-white prose-a:text-indigo-300 prose-code:text-indigo-300 prose-code:before:content-none prose-code:after:content-none prose-li:my-0.5 prose-p:my-2 prose-table:text-[13px] prose-th:text-white/70 prose-td:border-white/10 prose-th:border-white/10">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
                 {message.sources && message.sources.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5 border-t border-white/5 pt-2.5">
                     {message.sources.map((source) => (

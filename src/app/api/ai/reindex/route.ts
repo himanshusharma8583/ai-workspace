@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { reindexDocument } from "@/lib/rag";
 import { Role } from "@/generated/prisma/enums";
+import { aiLimiter, enforceRateLimit } from "@/lib/ratelimit";
 
 // Rebuilds the whole org's search index. Admin-only: it makes one embedding
 // API call per document, so it's not something every member should trigger.
@@ -17,6 +18,11 @@ export async function POST() {
       { status: 403 }
     );
   }
+
+  // One reindex makes an embedding call per document — the strictest budget
+  // of any endpoint, so it shares the tight AI limiter.
+  const limited = await enforceRateLimit(aiLimiter, ctx.userId);
+  if (limited) return limited;
 
   const documents = await prisma.document.findMany({
     where: { organizationId: ctx.organizationId },

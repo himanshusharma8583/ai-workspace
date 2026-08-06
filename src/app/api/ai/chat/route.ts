@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getWorkspaceContext } from "@/lib/workspace";
 import { runAgent } from "@/lib/agent";
+import { aiLimiter, enforceRateLimit } from "@/lib/ratelimit";
 
 const requestSchema = z.object({
   question: z.string().trim().min(2).max(1000),
@@ -24,6 +25,11 @@ export async function POST(request: Request) {
   if (!ctx) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  // Per-minute burst limit (Redis) on top of the per-day cap below (DB):
+  // the daily cap protects model quota, this stops rapid-fire loops.
+  const limited = await enforceRateLimit(aiLimiter, ctx.userId);
+  if (limited) return limited;
 
   const body = await request.json().catch(() => null);
   const parsed = requestSchema.safeParse(body);

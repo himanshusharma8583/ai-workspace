@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { authLimiter, clientIp, enforceRateLimit } from "@/lib/ratelimit";
 
 const signupSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -20,6 +21,11 @@ function slugify(name: string) {
 }
 
 export async function POST(request: Request) {
+  // Keyed by IP: this endpoint is open to anyone, and it does a bcrypt hash
+  // plus several DB writes per call — cheap to abuse without a limit.
+  const limited = await enforceRateLimit(authLimiter, clientIp(request));
+  if (limited) return limited;
+
   const body = await request.json().catch(() => null);
   const parsed = signupSchema.safeParse(body);
   if (!parsed.success) {

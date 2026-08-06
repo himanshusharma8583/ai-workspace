@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getWorkspaceContext, canEdit } from "@/lib/workspace";
 import { generateDocument } from "@/lib/ai";
 import { reindexDocument } from "@/lib/rag";
+import { aiLimiter, enforceRateLimit } from "@/lib/ratelimit";
 
 const requestSchema = z.object({
   prompt: z
@@ -29,6 +30,9 @@ export async function POST(request: Request) {
       { status: 403 }
     );
   }
+
+  const limited = await enforceRateLimit(aiLimiter, ctx.userId);
+  if (limited) return limited;
 
   const body = await request.json().catch(() => null);
   const parsed = requestSchema.safeParse(body);

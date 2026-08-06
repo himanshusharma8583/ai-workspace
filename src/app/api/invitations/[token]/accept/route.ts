@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { apiLimiter, enforceRateLimit } from "@/lib/ratelimit";
 
 export async function POST(
   _request: NextRequest,
@@ -11,6 +12,11 @@ export async function POST(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
   const userId = session.user.id;
+
+  // Tokens are looked up by exact value; limiting per user makes brute-force
+  // guessing of invite tokens impractical.
+  const limited = await enforceRateLimit(apiLimiter, userId);
+  if (limited) return limited;
 
   const { token } = await ctx.params;
 
